@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<style type="text/css">
+			*{
+				margin: 0;
+				padding:0;
+			}
+			#ul1{
+				width: 660px;
+				position: relative;
+				margin: 10px auto;
+			}
+			#ul1 li{
+				width: 200px;
+				height:150px;
+				float: left;
+				list-style: none;
+				margin:10px;
+				z-index: 1;
+			}
+			#ul1 li.active{
+				border:1px dashed red;
+			}
+			#ul1 img{
+				width: 200px;
+				height:150px;
+			}
+		</style>
+		<script src="js/move.js"></script>
+		<script type="text/javascript">
+			window.onload = function(){
+				var oUl = document.getElementById('ul1');
+				var aLi = document.getElementsByTagName('li');
+				var aPos = [];
+				var minZindex = 2;
+				//布局转换   将文档流定位转换为绝对定位
+				//将每张图片到页面的距离
+				for(var i = 0; i<aLi.length; i++){
+					aPos[i] = {left:　aLi[i].offsetLeft, top: aLi[i].offsetTop};
+				}
+				
+				for(var i = 0; i<aLi.length; i++){
+					aLi[i].style.left = aPos[i].left + 'px';
+					aLi[i].style.top = aPos[i].top + 'px';
+					
+					aLi[i].style.position = 'absolute';
+					aLi[i].style.margin = '0';
+					
+					aLi[i].index = i;
+				}
+				
+				//图片的拖拽
+				for(var i = 0; i<aLi.length; i++){
+					setDrag(aLi[i]);
+				}
+				function setDrag(obj){
+					obj.onmousedown = function(ev){
+						var ev = ev || event;
+						//当每张图片按下的时候  它的z-index++；就可以让每次点击的图片优先级最高
+						obj.style.zIndex = minZindex++;
+						var disX = ev.clientX - obj.offsetLeft;
+						var disY = ev.clientY - obj.offsetTop;
+						
+						document.onmousemove = function(ev){
+							var ev = ev || event;
+							obj.style.left = ev.clientX - disX + 'px';
+							obj.style.top = ev.clientY - disY + 'px';
+							
+							for(var i = 0; i<aLi.length; i++){
+								aLi[i].className = '';
+							}
+							var oNear = findNearRest(obj);
+							if(oNear){
+								oNear.className = 'active';
+							}
+							/*for(var i = 0; i<aLi.length; i++){
+								aLi[i].className = '';
+								//让每一张图片进行碰撞检测   点击的那张直接跳过
+								if(obj == aLi[i]){
+									continue;
+								}
+								if(cdTest(obj, aLi[i])){
+									aLi[i].className = 'active';
+								}
+							}*/
+						}
+						document.onmouseup = function(){
+							document.onmousemove = null;
+							document.onmouseup = null;
+							
+							var oNear = findNearRest(obj);
+							
+							//如果碰到了  交换两张图片的位置  没碰到点击的那张图片回到原来的位置
+							if(oNear){
+								oNear.className = '';
+								
+								oNear.style.zIndex = minZindex++;
+								obj.style.zIndex = minZindex++;
+								
+								startMove(oNear, aPos[obj.index]);
+								startMove(obj, aPos[oNear.index]);
+								
+								//交换两张图片的index
+								var temp;
+								temp = obj.index;
+								obj.index = oNear.index;
+								oNear.index = temp;
+							}else{
+								
+								//复杂版的
+								//startMove(obj, {left: aPos[obj.index].left,top: aPos[obj.index].ltop});
+								//简易版的
+								startMove(obj, aPos[obj.index])
+							}
+						}
+						
+						//清除运动框架中的定时器，解决没回去就拖的抖动问题
+						clearInterval(obj.iTimer);
+						return false;
+					}
+				}
+				
+				//碰撞检测
+				function cdTest(obj1, obj2){
+					
+					var l1 = obj1.offsetLeft;
+					var r1 = obj1.offsetLeft +　obj1.offsetWidth;
+					var t1 = obj1.offsetTop;
+					var b1 = obj1.offsetTop + obj1.offsetHeight;
+					
+					var l2 = obj2.offsetLeft;
+					var r2 = obj2.offsetLeft +　obj2.offsetWidth;
+					var t2 = obj2.offsetTop;
+					var b2 = obj2.offsetTop + obj2.offsetHeight;
+					
+					if(r1<l2 || l1>r2 || b1<t2 || t1>b2){
+						return false;
+					}else{
+						return true;
+					}
+				}
+				
+				function getDis(obj1, obj2){
+					var a = obj1.offsetLeft - obj2.offsetLeft;
+					var b = obj1.offsetTop - obj2.offsetTop;
+					
+					return Math.sqrt(a*a+b*b);
+				}
+				
+				//找到点击的那张图片碰上的所有图片  并且找到距离最近的
+				function findNearRest(obj){
+					var iMin = 999999;
+					var iMinIndex = -1;
+					
+					for(var i = 0; i<aLi.length; i++){
+						//点击的那个直接跳过
+						if(obj == aLi[i]){
+							continue;
+						}
+						//只有碰撞之后 才会发生之后的事情  碰不到什么都没有
+						if(cdTest(obj, aLi[i])){
+							//得到距离
+							var dis = getDis(obj, aLi[i]);
+							
+							if(iMin > dis){
+								iMin = dis;
+								iMinIndex = i;
+							}
+						}
+					}
+					//点击之后没有碰到
+					if(iMinIndex === -1){
+						return null;
+					}else{
+						//返回碰到的那个最近的
+						return aLi[iMinIndex];
+					}
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<ul id='ul1'>
+			<li><img src="img/0902f990f4e684c.jpg"/></li>
+			<li><img src="img/1b6b85dcdde9b3a4dfbf5c40921fe12e.jpg"/></li>
+			<li><img src="img/2079b1dbdade827.jpg"/></li>
+			<li><img src="img/36f20ae29c2d14b.jpg"/></li>
+			<li><img src="img/38e2cd86da897ab.jpg"/></li>
+			<li><img src="img/55e6bbf269401b34d88b8f6a.jpg"/></li>
+			<li><img src="img/55ec16fe69401b0ad8cc42fb.jpg"/></li>
+			<li><img src="img/55ff828269401b57972d1d70.jpg"/></li>
+			<li><img src="img/6b621e5cb06332f.jpg"/></li>
+		</ul>
+	</body>
+</html>
